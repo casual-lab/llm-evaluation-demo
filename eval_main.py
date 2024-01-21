@@ -4,14 +4,14 @@ from eval_helper import construct_evaluate_prompts, gen, process_medium_results
 if __name__ == '__main__':
     model_name = 'gpt-3.5-turbo'
 
-    eva_sets = ['en', 'zh', 'zh_subset'] # 'zh' or 'en' or 'zh_subset'
+    eva_set_choices = ['en', 'zh', 'zh_subset'] # 'zh' or 'en' or 'zh_subset'
     zero_shot = True # True for zero-shot evaluation and False for five-shot evaluation
     
     with open('.secret') as f:
         openai_key = f.readline().strip()
     callable_model = OpenAIAdapter(api_key=openai_key)
 
-    for eva_set in eva_sets:
+    for eva_set in eva_set_choices:
         # for English
         # construct evaluation prompts
         path = f'./data/test_{eva_set}.json'
