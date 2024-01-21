@@ -1,9 +1,9 @@
-# LLM evaluation Demo
+# LLM Evaluation Demo
 
 ## Ref Link
 
-- bench: <https://github.com/Giskard-AI/giskard>
-- Giskard: <https://github.com/arthur-ai/bench>
+- Giskard: <https://github.com/Giskard-AI/giskard>
+- bench: <https://github.com/arthur-ai/bench>
 - SafetyBench (dataset): <https://github.com/thu-coai/SafetyBench#download>
 
 ## Env Setup

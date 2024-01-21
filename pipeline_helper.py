@@ -3,9 +3,11 @@ import numpy as np
 import os
 from tqdm import tqdm, trange
 from random import seed, choice  
-from typing import Callable, List
+from typing import List, Mapping
 
-def construct_evaluate_prompts(path, outpath, en=True, zero_shot=True, shot_path=None):
+from model_adapter import CallableModel
+
+def construct_evaluate_prompts_on_files(path, outpath, en=True, zero_shot=True, shot_path=None):
     if not os.path.exists(outpath):
         dir_path = os.path.dirname(outpath)
         os.makedirs(dir_path, exist_ok=True)
@@ -16,8 +18,21 @@ def construct_evaluate_prompts(path, outpath, en=True, zero_shot=True, shot_path
     if not zero_shot:
         with open(shot_path, encoding='utf8') as f:
             shot_data = json.load(f)
+    else:
+        shot_data = None
+    res = construct_evaluate_prompts(data, shot_data, en, zero_shot)
+        
+    with open(outpath, 'w', encoding='utf8') as outf:
+        json.dump(res, outf, ensure_ascii=False, indent=2)
     
+    return res
+
+def construct_evaluate_prompts(data: List[Mapping[str, str]]
+                               , shot_data: Mapping[str, List[Mapping[str, str]]]=None
+                               , en: bool=True, zero_shot: bool=True) -> List[Mapping[str, str]]:
     res = []
+    if not zero_shot:
+        assert shot_data != None 
     for d in tqdm(data):
         question = d['question']
         options = d['options']
@@ -56,12 +71,9 @@ def construct_evaluate_prompts(path, outpath, en=True, zero_shot=True, shot_path
 
         d['prompt'] = prompt
         res.append(d)
-        
-    with open(outpath, 'w', encoding='utf8') as outf:
-        json.dump(res, outf, ensure_ascii=False, indent=2)
+    return res
 
-
-def gen(path, outpath, callable_model: Callable[[List[str]], List[str]], first_n=-1):
+def gen_on_file(path, outpath, callable_model: CallableModel):
     with open(path, encoding='utf8') as f:
         data = json.load(f)
         
@@ -82,29 +94,40 @@ def gen(path, outpath, callable_model: Callable[[List[str]], List[str]], first_n
                 
         print(f'total: {len(data)} samples, finished: {len(gen_ids)} samples, to be finished: {len(new_data)} samples')
 
-        data = new_data
+        data = new_data        
     
     if not data:
         return
     
-    batch_size = 8
-    local_first_n = len(data)
-    if(first_n > 0 and first_n < len(data)):
-        local_first_n = first_n
     with open(outpath, 'a', encoding='utf8') as outf:
-        for start in trange(0, local_first_n, batch_size):
-            batch_data = data[start: start + batch_size]
-            queries = [d['prompt'] for d in batch_data]
-            responses = callable_model(queries)
+        # batch_size = 8
+
+        # for start in trange(0, len(data), batch_size):
+        #     batch_data = data[start: start + batch_size]
+        #     queries = [d['prompt'] for d in batch_data]
+        #     responses = callable_model(queries)
             
-            for d, response in zip(batch_data, responses):
-                d['origin_pred'] = response
-                json.dump(d, outf, ensure_ascii=False)
-                outf.write('\n')
-                outf.flush()
+        #     for d, response in zip(batch_data, responses):
+        #         d['origin_pred'] = response
+        #         json.dump(d, outf, ensure_ascii=False)
+        #         outf.write('\n')
+        #         outf.flush()
+        data = gen(data, callable_model, batch_size=8)
+        for d in data:
+            json.dump(data, outf, ensure_ascii=False)
+            outf.write('\n')
+            outf.flush()
 
+def gen(data: List[Mapping[str, str]], callable_model: CallableModel, batch_size):
+    for start in trange(0, len(data), batch_size):
+        batch_data = data[start: start+batch_size]
+        queries = [d['prompt'] for d in batch_data]
+        responses = callable_model(queries)
+        for b, resp in zip(batch_data, responses):
+            b['origin_pred'] = resp
+    return data
 
-def process_medium_results(path, outpath):
+def process_medium_results_on_file(path, outpath):
     if not os.path.exists(outpath):
         dir_path = os.path.dirname(outpath)
         os.makedirs(dir_path, exist_ok=True)
@@ -115,7 +138,14 @@ def process_medium_results(path, outpath):
         for i, line in enumerate(f):
             d = json.loads(line)
             data.append(d)
-            
+
+    outres = process_medium_results(data)
+    
+    with open(outpath, 'w', encoding='utf8') as outf:
+        json.dump(outres, outf, ensure_ascii=False, indent=2)
+
+def process_medium_results(data: List[Mapping[str, str]]):
+
     def check_abcd(text):
         pred = -1
         if not text:
@@ -131,6 +161,8 @@ def process_medium_results(path, outpath):
 
     res = []
     for d in tqdm(data):
+        if('origin_pred' not in d):
+            print(d)
         content = d['origin_pred'].strip()
         line = content.split('\n')[0]
         pred = check_abcd(line)
@@ -174,7 +206,18 @@ def process_medium_results(path, outpath):
     for d in res:
         id = d['id']
         outres[id] = d['pred']
-    
-    with open(outpath, 'w', encoding='utf8') as outf:
-        json.dump(outres, outf, ensure_ascii=False, indent=2)
+    return outres
+
+def pipeline_on_file(model_name, zero_shot, callable_model, eva_set, path, outpath, shotpath, en) -> None:
+    construct_evaluate_prompts_on_files(path, outpath, en=en, zero_shot=zero_shot, shot_path=shotpath)
+        
+        # generate the responses
+    path = f'./data/test_{eva_set}_eva_{model_name}_zeroshot{zero_shot}_prompts.json'
+    outpath = f'./data/test_{eva_set}_eva_{model_name}_zeroshot{zero_shot}_res.jsonl'
+    gen_on_file(path, outpath, callable_model)
+        
+        # extract answers from the responses
+    path = f'./data/test_{eva_set}_eva_{model_name}_zeroshot{zero_shot}_res.jsonl'
+    outpath = f'./data/test_{eva_set}_eva_{model_name}_zeroshot{zero_shot}_res_processed.json'
+    process_medium_results_on_file(path, outpath)
 

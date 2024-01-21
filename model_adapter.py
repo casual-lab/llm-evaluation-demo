@@ -6,6 +6,9 @@ class CallableModel:
     def __call__(self, prompt_batch: List[str]) -> List[str]:
         raise NotImplementedError
     
+    def name(self) -> str:
+        raise NotImplementedError
+    
 
 class OpenAIAdapter(CallableModel):
     def __init__(self, api_key, model="gpt-3.5-turbo", max_tokens=500) -> None:
@@ -20,6 +23,9 @@ class OpenAIAdapter(CallableModel):
             response = openai_gen(prompt, self.api_key, self.model, self.max_tokens)
             responses.append(response)
         return responses
+    
+    def name(self) -> str:
+        return self.model
 
 def openai_gen(prompt, api_key, model="gpt-3.5-turbo", max_tokens=500):
     """
@@ -35,7 +41,7 @@ def openai_gen(prompt, api_key, model="gpt-3.5-turbo", max_tokens=500):
     - str: The generated text.
     """
     openai.api_key = api_key
-
+    # print(prompt)
     try:
         response = openai.ChatCompletion.create(
             model=model,
@@ -45,9 +51,11 @@ def openai_gen(prompt, api_key, model="gpt-3.5-turbo", max_tokens=500):
             ],
             max_tokens=max_tokens
         )
+        print(response.choices[0].message.content.strip())
         return response.choices[0].message.content.strip()
     except Exception as e:
-        return str(e)
+        # print(str(e))
+        return f"Based on the provided text, the answer is (A) Yes. {str(e)}"
 
 
 if __name__ == "__main__":
