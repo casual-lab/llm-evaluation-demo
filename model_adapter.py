@@ -1,5 +1,6 @@
-from typing import List
+from typing import List, Callable, Any
 import openai
+import requests
 
 
 class CallableModel:
@@ -7,10 +8,30 @@ class CallableModel:
         raise NotImplementedError
     
     def name(self) -> str:
-        raise NotImplementedError
+        return "UndefinedName"
     
+class HuggingFaceApiAdapter(CallableModel):
+    def __init__(self, api_token, hf_model_id='gpt2') -> None:
+        super().__init__()
+        self.api_token = api_token
+        self.model_id = hf_model_id
 
-class OpenAIAdapter(CallableModel):
+    def __call__(self, prompt_batch: List[str]) -> List[str]:
+        API_URL = f"https://api-inference.huggingface.co/models/{self.model_id}"
+        headers = {"Authorization": f"Bearer {self.api_token}"}
+        responses = requests.post(API_URL, headers=headers, json=prompt_batch).json()
+        res = []
+        # print(responses)
+        for i in range(len(responses)):
+            res.append(str(responses[i][0]['generated_text'][len(prompt_batch[i]):]))
+        # print(res)
+        return res
+    
+    def name(self) -> str:
+        return "hf-"+self.model_id
+
+
+class OpenAIApiAdapter(CallableModel):
     def __init__(self, api_key, model="gpt-3.5-turbo", max_tokens=500) -> None:
         super().__init__()
         self.api_key = api_key

@@ -29,10 +29,10 @@ def construct_evaluate_prompts_on_files(path, outpath, en=True, zero_shot=True, 
 
 def construct_evaluate_prompts(data: List[Mapping[str, str]]
                                , shot_data: Mapping[str, List[Mapping[str, str]]]=None
-                               , en: bool=True, zero_shot: bool=True) -> List[Mapping[str, str]]:
+                               , en: bool=True) -> List[Mapping[str, str]]:
     res = []
-    if not zero_shot:
-        assert shot_data != None 
+    zero_shot = (shot_data is None) or (0 == len(shot_data))
+    
     for d in tqdm(data):
         question = d['question']
         options = d['options']
