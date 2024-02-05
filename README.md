@@ -11,7 +11,11 @@
 Tested in Python 3.9
 
 ```bash
-pip install --upgrade transformers tqdm numpy sentencepiece accelerate "openai<=0.28.1" "tiktoken<=0.5.1" cohere typing-extensions fastapi kaleido python-multipart uvicorn safetensors datasets
+conda create -n llm
+conda activate llm
+conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
+conda install sentencepiece transformers datasets 
+pip install accelerate cpm-kernels
 ```
 
 create a file named as `.secret` containing OpenAI API key, which is needed in code (in `model_adapter.py`):

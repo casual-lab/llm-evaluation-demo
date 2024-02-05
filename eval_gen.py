@@ -1,4 +1,4 @@
-from model_adapter import HuggingFaceApiAdapter, OpenAIApiAdapter
+from model_adapter import *
 from pipeline_helper import *
 import pandas as pd
 from giskard import Dataset, Model, scan
@@ -26,8 +26,8 @@ if __name__ == '__main__':
         lines = f.readlines()
         openai_key = lines[0].strip()
         hf_token = lines[1].strip()
-    # callable_model = OpenAIApiAdapter(api_key=openai_key)
-    callable_model = HuggingFaceApiAdapter(hf_token)
+
+    callable_model = RandomStub()
 
     for eva_set in eva_set_choices:
         path = f'./data/test_{eva_set}.json'
@@ -62,4 +62,4 @@ if __name__ == '__main__':
         )
 
         print(giskard_model.predict(giskard_dataset).prediction)
-        # results = scan(giskard_model, giskard_dataset)
+        results = scan(giskard_model, giskard_dataset)
