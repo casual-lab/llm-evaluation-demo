@@ -1,5 +1,6 @@
 __pycache__
 .vscode
-data
+data/*
+!data/test_en_eva_baichuan-chat-13b_zeroshotTrue_res_processed.json
 .secret
 data.zip
